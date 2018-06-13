@@ -1,0 +1,77 @@
+
+---
+- hosts: wildfly
+
+  tasks:
+
+    - name: Creation user
+      user:
+        name: wildfly
+        password: '$6$rblxV1K0srA7BV$bPD0C3S4MbYyU5yniQGehfq8wLbm2EeQbG/wcQnZL/o16PDfKtu0Zm2Ki5cxrTy3xk9TTr.TV/tG/G/JYGDpH/'
+        system: yes
+        shell: /bin/bash
+        state: present
+
+    - name: Installation du package openjdk-8-jdk-headless
+      apt:
+        name: openjdk-8-jdk-headless
+        state: present
+
+    - name: Telechargement de l'archive
+      get_url:
+        url: http://download.jboss.org/wildfly/11.0.0.Final/wildfly-11.0.0.Final.tar.gz
+        dest: /opt/
+        mode: 0440
+
+    - name: change le proprietaire de /opt/wildfly 
+      file:
+        path: /opt/wildfly
+        owner: wildfly
+        state: directory
+
+    - name: Suppression anciens fichiers
+      file: path=/opt/wildfly state=directory state=absent
+
+
+    - name: Extraction 
+      unarchive:
+        src: /opt/wildfly-11.0.0.Final.tar.gz
+        dest: /opt/
+
+    - name: Renommage
+      command: mv /opt/wildfly-11.0.0.Final /opt/wildfly
+
+    - name: Creation du dossier
+      file: path=/etc/wildfly state=directory
+      become: yes
+      become_user: wildfly
+
+    - name: Copie
+      copy:
+        src: /opt/wildfly/docs/contrib/scripts/systemd/wildfly.conf
+        dest: /etc/wildfly/
+
+
+    - name: Copie
+      copy:
+        src: /opt/wildfly/docs/contrib/scripts/systemd/wildfly.service
+        dest: /etc/systemd/system/
+
+
+    - name: Copie
+      copy:
+        src: /opt/wildfly/docs/contrib/scripts/systemd/launch.sh
+        dest: /opt/wildfly/bin
+
+    - name: Enregistrer wildfly pour qui démarre au boot
+      service: name=wildfly enabled=yes state=started
+      become: yes
+      become_user: wildfly
+
+    - name: Vérification du service
+      command: systemctl status wildfly.service
+      become: yes
+      become_user: wildfly
+
+
+
